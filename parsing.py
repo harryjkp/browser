@@ -169,7 +169,10 @@ class MainWindow(QMainWindow):
         text.setWordWrap(True)
         #i = self.tabs.addTab(browser, label)
 
-        i = self.tabs.addTab(text, label)
+        scroll = QScrollArea()
+        scroll.setWidget(text)
+
+        i = self.tabs.addTab(scroll, label)
 
         self.tabs.setCurrentIndex(i)
 
