@@ -1,8 +1,11 @@
 from PySide2.QtCore import *
 from PySide2.QtWidgets import *
+from PySide2 import QtWidgets
 from PySide2.QtGui import *
 from PySide2.QtWebEngineWidgets import *
 from PySide2.QtPrintSupport import *
+#import urllib2
+from urllib.request import urlopen
 
 import os
 import sys
@@ -141,13 +144,42 @@ class MainWindow(QMainWindow):
         navigate_mozarella_action.triggered.connect(self.navigate_mozarella)
         help_menu.addAction(navigate_mozarella_action)
 
-        self.add_new_tab(QUrl('http://www.google.com'), 'Homepage')
+        self.add_new_html_tab(QUrl('http://www.google.com'), 'Homepage')
 
 
         self.show()
 
         self.setWindowTitle("Mozarella Ashbadger")
         self.setWindowIcon(QIcon(os.path.join('images', 'ma-icon-64.png')))
+
+    def fetch_html(self,url):
+
+        response = urlopen('http://python.org/')
+        html = response.read()
+        return html
+    def add_new_html_tab(self, qurl=None, label="Blank"):
+
+        if qurl is None:
+            qurl = QUrl('')
+
+        browser = QWebEngineView()
+        browser.setUrl(qurl)
+        raw_html = self.fetch_html(qurl.url())
+        text = QtWidgets.QLabel(str(raw_html)) #"Hello World")
+        text.setWordWrap(True)
+        #i = self.tabs.addTab(browser, label)
+
+        i = self.tabs.addTab(text, label)
+
+        self.tabs.setCurrentIndex(i)
+
+        # More difficult! We only want to update the url when it's from the
+        # correct tab
+        browser.urlChanged.connect(lambda qurl, browser=browser:
+                                   self.update_urlbar(qurl, browser))
+
+        browser.loadFinished.connect(lambda _, i=i, browser=browser:
+                                     self.tabs.setTabText(i, browser.page().title()))
 
     def add_new_tab(self, qurl=None, label="Blank"):
 
