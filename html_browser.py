@@ -6,7 +6,7 @@ from PySide2.QtWebEngineWidgets import *
 from PySide2.QtPrintSupport import *
 #import urllib2
 from urllib.request import urlopen
-
+from parser import parse_html
 import os
 import sys
 
@@ -54,6 +54,8 @@ class MainWindow(QMainWindow):
         self.tabs.currentChanged.connect(self.current_tab_changed)
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
+
+        self.texts = {}
 
         #self.setWindowFlags(Qt.FramelessWindowHint)
 
@@ -144,7 +146,7 @@ class MainWindow(QMainWindow):
         navigate_mozarella_action.triggered.connect(self.navigate_mozarella)
         help_menu.addAction(navigate_mozarella_action)
 
-        self.add_new_html_tab(QUrl('http://www.google.com'), 'Homepage')
+        self.add_new_tab(QUrl('http://www.google.com'), 'Homepage')
 
 
         self.show()
@@ -154,9 +156,10 @@ class MainWindow(QMainWindow):
 
     def fetch_html(self,url):
 
-        response = urlopen('http://python.org/')
+        response = urlopen(url)
         html = response.read()
-        return html
+        #print(html)
+        return parse_html(str(html))
     def add_new_html_tab(self, qurl=None, label="Blank"):
 
         if qurl is None:
@@ -167,12 +170,18 @@ class MainWindow(QMainWindow):
         raw_html = self.fetch_html(qurl.url())
         text = QtWidgets.QLabel(str(raw_html)) #"Hello World")
         text.setWordWrap(True)
+
+
         #i = self.tabs.addTab(browser, label)
 
         scroll = QScrollArea()
         scroll.setWidget(text)
 
+
+
         i = self.tabs.addTab(scroll, label)
+
+        #self.texts[i] = text
 
         self.tabs.setCurrentIndex(i)
 
@@ -193,15 +202,34 @@ class MainWindow(QMainWindow):
         browser.setUrl(qurl)
         i = self.tabs.addTab(browser, label)
 
+        self.add_new_html_tab(qurl)
+
         self.tabs.setCurrentIndex(i)
 
         # More difficult! We only want to update the url when it's from the
         # correct tab
         browser.urlChanged.connect(lambda qurl, browser=browser:
                                    self.update_urlbar(qurl, browser))
+        #browser.urlChanged.connect(lambda qurl,i=i, browser=browser:
+        #                                   self.texts[i+1].setText(self.fetch_html(qurl.url())))
 
         browser.loadFinished.connect(lambda _, i=i, browser=browser:
                                      self.tabs.setTabText(i, browser.page().title()))
+
+
+        #browser.urlChanged.connect(lambda qurl, browser=browser:
+                                           #self.update_urlbar(qurl, browser))
+
+        browser.loadFinished.connect(lambda _, i=i, browser=browser:
+                                             self.tabs.setTabText(i+1, browser.page().title()))
+
+
+        #browser.loadFinished.connect(lambda _, i=i, browser=browser:
+                                             #self.tabs.widget(i+1).widget().setText("bork"))
+
+        browser.urlChanged.connect(lambda qurl, browser=browser:
+                        self.tabs.widget(i+1).widget().setText(self.fetch_html(qurl.url())))
+        #self.tabs.widget(i+1).widget().setText("bork")
 
     def tab_open_doubleclick(self, i):
         if i == -1:  # No tab under the click
@@ -211,6 +239,9 @@ class MainWindow(QMainWindow):
         qurl = self.tabs.currentWidget().url()
         self.update_urlbar(qurl, self.tabs.currentWidget())
         self.update_title(self.tabs.currentWidget())
+
+        #self.texts[i+1].setText("boop")
+        #self.texts[i+1].setText("boop")
 
     def close_current_tab(self, i):
         if self.tabs.count() < 2:
